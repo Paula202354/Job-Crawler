@@ -13,23 +13,14 @@ sondern wird nur als Markierung in der E-Mail mitgegeben.
 """
 import re
 import requests
-from urllib.parse import urlparse
 
 from src.config import COMPANIES, GUESS_CAREER_PATHS
+from src.text_utils import word_overlap_ratio
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; JobCrawler/1.0; persönlicher Gebrauch)"}
 
 # Firmenname -> career_url Lookup, einmalig aufgebaut
 _COMPANY_LOOKUP = {c["name"].lower(): c for c in COMPANIES}
-
-
-def _normalize(text: str) -> str:
-    """Vereinfacht einen Text für den groben Titel-Abgleich:
-    Kleinschreibung, (m/w/d)-Zusätze und Mehrfach-Whitespace entfernen."""
-    text = text.lower()
-    text = re.sub(r"\(?[mwdx/]{3,}\)?", "", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
 
 
 def _fetch(url: str) -> str | None:
@@ -43,15 +34,9 @@ def _fetch(url: str) -> str | None:
 
 
 def _title_appears_in_page(job_title: str, page_html: str) -> bool:
-    normalized_title = _normalize(job_title)
-    normalized_page = _normalize(page_html)
     # Bei kurzen Titeln (<3 Wörter) verlangen wir den ganzen Titel als Substring,
     # bei längeren reicht es, wenn die meisten Kernwörter vorkommen.
-    words = [w for w in normalized_title.split() if len(w) > 2]
-    if not words:
-        return False
-    hits = sum(1 for w in words if w in normalized_page)
-    return hits / len(words) >= 0.7
+    return word_overlap_ratio(job_title, page_html) >= 0.7
 
 
 def _guess_career_page(company_name: str) -> str | None:

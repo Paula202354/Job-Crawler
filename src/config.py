@@ -8,6 +8,8 @@ Hier werden Suchbegriffe, Standort und die überwachten Firmen/Institutionen gep
 # ---------------------------------------------------------------------------
 HOME_POSTAL_CODE = "50226"          # Frechen-Königsdorf
 HOME_CITY = "Frechen"
+HOME_LATITUDE = 50.9364             # Bahnhof Frechen-Königsdorf
+HOME_LONGITUDE = 6.7779
 SEARCH_RADIUS_KM = 30
 ALLOW_REMOTE = True                  # Remote-Jobs unabhängig vom Radius zulassen
 

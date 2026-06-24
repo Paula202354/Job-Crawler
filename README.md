@@ -8,16 +8,23 @@ gegen die Original-Karriereseiten der Unternehmen.
 
 1. **Suche** über die Adzuna-API mit drei Suchbegriff-Sets (Public Affairs,
    Nachhaltigkeit/Energie, Strategie/Projektmanagement).
-2. **Home-Office-Filter**: nur Stellen mit Remote-/Hybrid-/Home-Office-Hinweis.
-3. **Vollzeit/Unbefristet-Filter**: schließt Werkstudenten-, Praktikums-,
+2. **Relevanz-Filter**: prüft, ob der tatsächliche Jobtitel wirklich zum
+   Suchbegriff passt, der ihn gefunden hat (Adzunas eigene Suche ist
+   keine exakte Phrasensuche, siehe "Behobene Bugs" unten).
+3. **Entfernungs-Filter**: eigene Entfernungsberechnung per Haversine-Formel
+   anhand der von Adzuna mitgelieferten Koordinaten, statt sich allein auf
+   den "distance"-Parameter der API zu verlassen. Jobs mit Home-Office-Hinweis
+   sind vom Radius ausgenommen.
+4. **Home-Office-Filter**: nur Stellen mit Remote-/Hybrid-/Home-Office-Hinweis.
+5. **Vollzeit/Unbefristet-Filter**: schließt Werkstudenten-, Praktikums-,
    Trainee- und sonstige kategorisch befristete/Teilzeit-Stellen aus, sowie
    Stellen mit explizitem Befristungs- oder Teilzeit-Hinweis.
-4. **Duplikat-Check**: Stellen, die bereits gemeldet wurden, werden nicht erneut verschickt.
-5. **Verifizierung**: Für jeden neuen Treffer wird versucht, die Stelle auf
+6. **Duplikat-Check**: Stellen, die bereits gemeldet wurden, werden nicht erneut verschickt.
+7. **Verifizierung**: Für jeden neuen Treffer wird versucht, die Stelle auf
    der Original-Karriereseite des Unternehmens zu finden (Aktualitätsprüfung).
    Ergebnis wird als „verifiziert“ oder „ungeprüft“ markiert — beides wird
    verschickt, nur halt unterschiedlich gekennzeichnet.
-6. **E-Mail**: Versand der neuen Treffer per Resend an deine Adresse.
+8. **E-Mail**: Versand der neuen Treffer per Resend an deine Adresse.
 
 Läuft automatisch **einmal täglich** über GitHub Actions — kein eigener Server nötig.
 
@@ -74,6 +81,19 @@ python -m src.main
 - **Zeitplan**: `.github/workflows/crawler.yml`, Zeile mit `cron:`.
 - **E-Mail-Layout**: `src/notifier.py`.
 
+## Behobene Bugs (Versionshinweis)
+
+Beim ersten echten Lauf tauchten zwei klar fachfremde Treffer auf (ein Google-Job
+in Barcelona, ein Treffer aus dem medizinischen Controlling). Ursache: Adzunas
+`what`-Parameter ist keine exakte Phrasensuche, sondern eine lockere
+Relevanzsuche über Einzelwörter -- bei "Public Affairs Manager" reichte
+offenbar schon das Wort "Manager" allein. Behoben durch:
+- einen Relevanz-Filter (`src/relevance_filter.py`), der den gefundenen
+  Jobtitel gegen den ursprünglichen Suchbegriff prüft,
+- einen Entfernungs-Filter (`src/distance_filter.py`) mit eigener
+  Haversine-Berechnung anhand der von Adzuna mitgelieferten Koordinaten,
+  statt sich allein auf den API-Parameter zu verlassen.
+
 ## Bekannte Einschränkungen
 
 - Manche Karriereseiten laden Inhalte erst per JavaScript nach (z. B. über
@@ -90,3 +110,9 @@ python -m src.main
   sich ein Blick, ob das in der Praxis zu viele oder zu wenige Treffer
   durchlässt — die Schlüsselwortlisten lassen sich in
   `src/employment_filter.py` leicht anpassen.
+- Der Entfernungs-Filter lässt Jobs außerhalb des 30-km-Radius durch, sobald
+  irgendein Home-Office-Hinweis vorliegt -- auch bei "hybrid" oder "teilweise
+  Homeoffice", was bei großer Distanz (z. B. ein anderes Land) praktisch nicht
+  umsetzbar wäre. Aktuell wird das bewusst nicht zusätzlich eingeschränkt; bei
+  Bedarf lässt sich das in `src/distance_filter.py` verschärfen (z. B. nur noch
+  "vollständig remote" statt jedes Home-Office-Hinweises als Ausnahme).

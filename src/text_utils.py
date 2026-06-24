@@ -32,3 +32,26 @@ def has_unnegated_keyword(text: str, keywords: list[str]) -> bool:
             if not is_negated(text, match.start(), match.end()):
                 return True
     return False
+
+
+def normalize(text: str) -> str:
+    """Vereinfacht einen Text für den groben Wortabgleich:
+    Kleinschreibung, (m/w/d)-Zusätze und Mehrfach-Whitespace entfernen."""
+    text = text.lower()
+    text = re.sub(r"\(?[mwdx/]{3,}\)?", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def word_overlap_ratio(reference_text: str, candidate_text: str) -> float:
+    """Gibt den Anteil der (>2-stelligen) Wörter aus reference_text zurück,
+    die als Substring in candidate_text vorkommen (beide vorher normalisiert).
+    Substring-Suche statt exaktem Wortabgleich, damit deutsche Komposita wie
+    "Strategiereferent" bei der Suche nach "Referent" trotzdem treffen."""
+    normalized_reference = normalize(reference_text)
+    normalized_candidate = normalize(candidate_text)
+    words = [w for w in normalized_reference.split() if len(w) > 2]
+    if not words:
+        return 0.0
+    hits = sum(1 for w in words if w in normalized_candidate)
+    return hits / len(words)

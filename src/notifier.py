@@ -45,10 +45,11 @@ def _build_html(jobs: list[dict]) -> str:
         for job in category_jobs:
             status_label = STATUS_LABELS.get(job.get("verification_status"), "")
             radius_note = " · außerhalb 30-km-Radius, nur wegen Remote-Option gelistet" if job.get("out_of_radius") else ""
+            distance_note = f" · ca. {job['distance_km']} km entfernt" if job.get("distance_km") is not None else ""
             items.append(f"""
                 <li style="margin-bottom: 14px;">
                     <a href="{job['url']}" style="font-weight: bold; font-size: 15px;">{job['title']}</a><br>
-                    <span>{job['company']} – {job.get('location', '')}</span><br>
+                    <span>{job['company']} – {job.get('location', '')}{distance_note}</span><br>
                     <span style="font-size: 13px; color: #555;">{status_label}{radius_note}</span>
                 </li>
             """)

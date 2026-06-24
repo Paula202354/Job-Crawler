@@ -49,6 +49,8 @@ def search_adzuna(keyword: str, postal_code: str, radius_km: int, results_per_pa
             "title": item.get("title", "").strip(),
             "company": (item.get("company") or {}).get("display_name", "Unbekannt"),
             "location": (item.get("location") or {}).get("display_name", ""),
+            "latitude": item.get("latitude"),
+            "longitude": item.get("longitude"),
             "url": item.get("redirect_url", ""),
             "description": item.get("description", ""),
             "created": item.get("created", ""),
