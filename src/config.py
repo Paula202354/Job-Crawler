@@ -35,6 +35,7 @@ SEARCH_TERMS = {
         "Verbandsreferent",
         "Referent Interessenvertretung",
         "Stakeholder Manager",
+        "Politikwissenschaftler",
     ],
     "nachhaltigkeit_energie": [
         "Referent Nachhaltigkeit",
@@ -43,12 +44,43 @@ SEARCH_TERMS = {
         "Referent Energiepolitik",
         "Klimapolitik Referent",
         "Nachhaltigkeitsmanager Regulatorik",
+        "Referent Energie- und Klimapolitik",
     ],
     "strategie_projektmanagement": [
         "Referent Strategie",
         "Projektmanager Politik",
         "Strategiereferent",
         "Projektkoordinator Verwaltung",
+    ],
+
+    # --- Suchbegriffe für Möhre (Marketing/Digital) ---
+    "moehre_digital_strategy": [
+        "Digital Strategy Consultant",
+        "Marketing Strategy Manager",
+        "Digital Marketing Manager",
+        "Marketing Consultant",
+    ],
+    "moehre_online_marketing": [
+        "SEO Manager",
+        "SEA Manager",
+        "Performance Marketing Manager",
+        "Online Marketing Manager",
+        "Social Media Manager",
+    ],
+    "moehre_marketing_kommunikation": [
+        "Kampagnenmanager",
+        "Referent Marketing und Kommunikation",
+        "Brand Manager",
+        "Marketing Communications Manager",
+    ],
+    "moehre_produktmarketing": [
+        "Product Marketing Manager",
+        "Produktmanager Marketing",
+    ],
+    "moehre_crm_marketing_automation": [
+        "CRM Manager",
+        "Marketing Automation Manager",
+        "Lifecycle Marketing Manager",
     ],
 }
 
@@ -99,6 +131,16 @@ COMPANIES = [
 
     # --- Beratung ---
     {"name": "Rebel Deutschland", "career_url": "https://www.rebelgroup.com/de/karriere", "out_of_radius": False},
+
+    # --- Marketing/Digital-Firmen für Möhre ---
+    {"name": "RTL Deutschland", "career_url": "https://jobsearch.createyourowncareer.com/RTL/", "out_of_radius": False},
+    {"name": "L'Oréal Deutschland", "career_url": "https://career.loreal.com/DE/", "out_of_radius": False},
+    {"name": "trivago", "career_url": "https://careers.trivago.com/jobs/", "out_of_radius": False},
+    {"name": "QVC Deutschland", "career_url": "https://unternehmen.qvc.de/lp/karriere/", "out_of_radius": False},
+    {"name": "Lekkerland SE", "career_url": "https://karriere.lekkerland.de/", "out_of_radius": False},
+    {"name": "Mäurer & Wirtz", "career_url": "https://www.m-w.de/karriere/", "out_of_radius": True},
+    {"name": "1. FC Köln", "career_url": "https://fc.de/jobs", "out_of_radius": False},
+    {"name": "Kölner Haie", "career_url": "https://www.haie.de/jobs/", "out_of_radius": False},
 ]
 
 # ---------------------------------------------------------------------------
@@ -111,7 +153,15 @@ GUESS_CAREER_PATHS = ["/karriere", "/jobs", "/careers", "/karriere/jobs", "/de/k
 # ---------------------------------------------------------------------------
 # E-Mail
 # ---------------------------------------------------------------------------
-NOTIFY_EMAIL = "lukas.verhofstad@gmail.com"
+# WICHTIG: Resends kostenloser Test-Absender (onboarding@resend.dev) erlaubt
+# nur den Versand an die E-Mail-Adresse, mit der der jeweilige Resend-Account
+# registriert wurde (ohne eigene verifizierte Domain). Deshalb braucht jede
+# Person hier einen EIGENEN Resend-Account samt eigenem API-Key -- beide
+# Mails haben aber denselben Inhalt (alle Treffer, alle Kategorien).
+NOTIFY_RECIPIENTS = [
+    {"email": "lukas.verhofstad@gmail.com", "api_key_env": "RESEND_API_KEY"},
+    {"email": "miri.eckardt@gmail.com", "api_key_env": "RESEND_API_KEY_MOEHRE"},
+]
 
 # ---------------------------------------------------------------------------
 # Datenablage (Duplikat-Erkennung)
