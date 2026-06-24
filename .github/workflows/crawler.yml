@@ -38,4 +38,8 @@ jobs:
           git config user.email "actions@github.com"
           git add data/seen_jobs.json
           git diff --quiet --cached || git commit -m "Aktualisiere gesehene Job-IDs [skip ci]"
+          # Falls in der Zwischenzeit (z.B. durch einen manuellen Push) neue
+          # Commits auf GitHub gelandet sind, diese zuerst einarbeiten, bevor
+          # gepusht wird -- vermeidet "rejected, fetch first"-Fehler.
+          git pull --rebase origin main
           git push
