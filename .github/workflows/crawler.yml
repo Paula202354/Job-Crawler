@@ -10,6 +10,13 @@ on:
 permissions:
   contents: write # nötig, damit der Workflow data/seen_jobs.json zurückschreiben darf
 
+# Verhindert, dass zwei Läufe gleichzeitig starten und sich beim finalen
+# Push gegenseitig blockieren -- ein neuer Lauf wartet, bis der vorherige
+# fertig ist, statt parallel zu laufen.
+concurrency:
+  group: job-crawler-single-run
+  cancel-in-progress: false
+
 jobs:
   crawl:
     runs-on: ubuntu-latest
@@ -38,8 +45,15 @@ jobs:
           git config user.email "actions@github.com"
           git add data/seen_jobs.json
           git diff --quiet --cached || git commit -m "Aktualisiere gesehene Job-IDs [skip ci]"
-          # Falls in der Zwischenzeit (z.B. durch einen manuellen Push) neue
-          # Commits auf GitHub gelandet sind, diese zuerst einarbeiten, bevor
-          # gepusht wird -- vermeidet "rejected, fetch first"-Fehler.
-          git pull --rebase origin main
-          git push
+          # Bis zu 5 Versuche: zuerst Remote-Stand einarbeiten, dann pushen.
+          # Falls zwischen Pull und Push doch noch jemand anderes gepusht hat,
+          # einfach erneut versuchen statt sofort aufzugeben.
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main
+            if git push; then
+              echo "Push erfolgreich (Versuch $i)."
+              break
+            fi
+            echo "Push fehlgeschlagen (Versuch $i von 5), erneuter Versuch ..."
+            sleep $((RANDOM % 5 + 1))
+          done
