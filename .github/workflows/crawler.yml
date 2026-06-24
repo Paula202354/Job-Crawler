@@ -1,0 +1,41 @@
+name: Job Crawler
+
+on:
+  schedule:
+    # Läuft täglich um 6:30 Uhr UTC = 7:30 bzw. 8:30 Uhr deutscher Zeit
+    # (je nach Sommer-/Winterzeit). Bei Bedarf einfach anpassen.
+    - cron: "30 6 * * *"
+  workflow_dispatch: {} # erlaubt manuelles Auslösen über die GitHub-Oberfläche
+
+permissions:
+  contents: write # nötig, damit der Workflow data/seen_jobs.json zurückschreiben darf
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r requirements.txt
+
+      - name: Crawler ausführen
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: python -m src.main
+
+      - name: Aktualisierte Duplikat-Liste committen
+        run: |
+          git config user.name "job-crawler-bot"
+          git config user.email "actions@github.com"
+          git add data/seen_jobs.json
+          git diff --quiet --cached || git commit -m "Aktualisiere gesehene Job-IDs [skip ci]"
+          git push
