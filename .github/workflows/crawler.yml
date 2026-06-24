@@ -50,6 +50,7 @@ jobs:
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY_MOEHRE: ${{ secrets.RESEND_API_KEY_MOEHRE }}
         run: python -m src.main
 
       - name: Aktualisierte Liste bekannter Job-IDs im Cache speichern

@@ -2,14 +2,18 @@
 Versendet die täglichen Job-Treffer per E-Mail über die Resend-API
 (https://resend.com, kostenloses Kontingent: 100 Mails/Tag).
 
-Benötigte Umgebungsvariable: RESEND_API_KEY
+WICHTIG: Resends Test-Absender (onboarding@resend.dev) erlaubt ohne eigene
+verifizierte Domain nur den Versand an die E-Mail-Adresse des jeweiligen
+Resend-Account-Inhabers. Deshalb wird hier für jeden Empfänger ein eigener
+API-Key verwendet (siehe NOTIFY_RECIPIENTS in config.py) und die Mail
+entsprechend mehrfach versendet -- mit identischem Inhalt für alle.
 """
 import os
 from datetime import date
 
 import requests
 
-from src.config import NOTIFY_EMAIL
+from src.config import NOTIFY_RECIPIENTS
 
 RESEND_URL = "https://api.resend.com/emails"
 # Resend verlangt eine verifizierte Absender-Domain ODER den Test-Absender
@@ -26,6 +30,11 @@ CATEGORY_LABELS = {
     "public_affairs": "Public Affairs / Politikberatung",
     "nachhaltigkeit_energie": "Nachhaltigkeit / Energie-Regulierung",
     "strategie_projektmanagement": "Strategie / Projektmanagement",
+    "moehre_digital_strategy": "Möhre: Digital Strategy & Consulting",
+    "moehre_online_marketing": "Möhre: Online Marketing / Performance",
+    "moehre_marketing_kommunikation": "Möhre: Marketing-Kommunikation & Kampagnen",
+    "moehre_produktmarketing": "Möhre: Produktmarketing",
+    "moehre_crm_marketing_automation": "Möhre: CRM & Marketing Automation",
 }
 
 
@@ -66,13 +75,11 @@ def _build_html(jobs: list[dict]) -> str:
     """
 
 
-def send_notification(jobs: list[dict]) -> None:
-    api_key = os.environ.get("RESEND_API_KEY")
-    if not api_key:
-        raise RuntimeError("RESEND_API_KEY fehlt. Bitte als Umgebungsvariable/GitHub Secret setzen.")
-
-    subject = f"{len(jobs)} neue Stellenanzeige(n)" if jobs else "Job-Crawler: keine neuen Treffer heute"
-
+def _send_single_email(api_key: str, to_email: str, subject: str, html: str) -> bool:
+    """Sendet eine einzelne E-Mail über den angegebenen API-Key.
+    Gibt True bei Erfolg zurück, False bei Fehler (loggt die Fehlermeldung,
+    bricht aber nicht den gesamten Lauf ab, falls ein anderer Empfänger
+    trotzdem erfolgreich beliefert werden kann)."""
     response = requests.post(
         RESEND_URL,
         headers={
@@ -81,15 +88,38 @@ def send_notification(jobs: list[dict]) -> None:
         },
         json={
             "from": FROM_ADDRESS,
-            "to": [NOTIFY_EMAIL],
+            "to": [to_email],
             "subject": subject,
-            "html": _build_html(jobs),
+            "html": html,
         },
         timeout=20,
     )
 
     if response.status_code >= 300:
-        print(f"  [FEHLER] E-Mail-Versand fehlgeschlagen: {response.status_code} {response.text}")
-        response.raise_for_status()
-    else:
-        print(f"  E-Mail erfolgreich versendet an {NOTIFY_EMAIL}.")
+        print(f"  [FEHLER] E-Mail-Versand an {to_email} fehlgeschlagen: "
+              f"{response.status_code} {response.text}")
+        return False
+
+    print(f"  E-Mail erfolgreich versendet an {to_email}.")
+    return True
+
+
+def send_notification(jobs: list[dict]) -> None:
+    subject = f"{len(jobs)} neue Stellenanzeige(n)" if jobs else "Job-Crawler: keine neuen Treffer heute"
+    html = _build_html(jobs)
+
+    any_success = False
+    for recipient in NOTIFY_RECIPIENTS:
+        api_key = os.environ.get(recipient["api_key_env"])
+        if not api_key:
+            print(f"  [WARNUNG] {recipient['api_key_env']} fehlt -- "
+                  f"E-Mail an {recipient['email']} wird übersprungen.")
+            continue
+        if _send_single_email(api_key, recipient["email"], subject, html):
+            any_success = True
+
+    if not any_success:
+        raise RuntimeError(
+            "Keine E-Mail konnte versendet werden. Bitte prüfen, ob die "
+            "RESEND_API_KEY-Secrets korrekt gesetzt sind."
+        )

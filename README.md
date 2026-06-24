@@ -4,6 +4,11 @@ Automatisierter, täglich laufender Crawler für Stellenanzeigen im Umkreis von
 30&nbsp;km um Frechen-Königsdorf (inkl. Remote-Stellen), mit Aktualitätsprüfung
 gegen die Original-Karriereseiten der Unternehmen.
 
+**Dieses Repository wird von zwei Personen gemeinsam genutzt** (Lukas und
+Möhre) -- beide erhalten dieselbe tägliche Mail mit allen Treffern aus allen
+Kategorien. Die Kategorie-Überschriften in der Mail zeigen, aus wessen
+Suchrichtung ein Treffer stammt.
+
 ## Funktionsweise
 
 1. **Suche** über die Adzuna-API mit drei Suchbegriff-Sets (Public Affairs,
@@ -33,9 +38,17 @@ Läuft automatisch **einmal täglich** über GitHub Actions — kein eigener Ser
 ### 1. Accounts anlegen (beide kostenlos)
 
 - **Adzuna**: Registrierung auf https://developer.adzuna.com/ → `App ID` und `App Key` notieren.
-- **Resend**: Registrierung auf https://resend.com/ → API-Key erstellen unter *API Keys*.
-  Für den Einstieg reicht der Test-Absender `onboarding@resend.dev`, später kann
-  eine eigene Domain verifiziert werden.
+- **Resend (für Lukas)**: Registrierung auf https://resend.com/ mit
+  `lukas.verhofstad@gmail.com` → API-Key erstellen unter *API Keys*.
+- **Resend (für Möhre)**: **Zweiter, eigener** Account auf https://resend.com/
+  mit `miri.eckardt@gmail.com` registrieren → eigenen API-Key erstellen.
+
+  **Wichtig, warum zwei Accounts nötig sind**: Resends kostenloser
+  Test-Absender (`onboarding@resend.dev`) erlaubt ohne eigene verifizierte
+  Domain nur den Versand an die E-Mail-Adresse, mit der der jeweilige
+  Resend-Account registriert wurde. Ein einzelner Account könnte also nicht
+  an beide Adressen gleichzeitig senden -- deshalb braucht jede Person ihren
+  eigenen Account und eigenen API-Key, auch wenn beide dieselbe Mail erhalten.
 
 ### 2. Repository auf GitHub anlegen
 
@@ -57,7 +70,8 @@ Im Repository: **Settings → Secrets and variables → Actions → New reposito
 |---|---|
 | `ADZUNA_APP_ID` | deine Adzuna App-ID |
 | `ADZUNA_APP_KEY` | dein Adzuna App-Key |
-| `RESEND_API_KEY` | dein Resend API-Key |
+| `RESEND_API_KEY` | Lukas' Resend API-Key |
+| `RESEND_API_KEY_MOEHRE` | Möhres Resend API-Key |
 
 ### 4. Workflow testen
 
@@ -94,6 +108,18 @@ offenbar schon das Wort "Manager" allein. Behoben durch:
   Haversine-Berechnung anhand der von Adzuna mitgelieferten Koordinaten,
   statt sich allein auf den API-Parameter zu verlassen.
 
+Außerdem behoben: Die Liste bekannter Job-IDs (`data/seen_jobs.json`) wurde
+ursprünglich per `git commit` + `git push` ins Repository zurückgeschrieben.
+Das führte wiederholt zu "rejected, fetch first"-Fehlern, sobald gleichzeitig
+manuell gepusht oder der Workflow mehrfach kurz hintereinander getestet
+wurde (klassische Race Condition bei parallelen Git-Pushes auf dieselbe
+Datei). Behoben durch einen Architekturwechsel: Die Liste wird jetzt über
+GitHub's **Cache-Mechanismus** (`actions/cache`) zwischen den Läufen
+gespeichert, nicht mehr per Git-Commit. Dadurch kann dieser Konflikt
+grundsätzlich nicht mehr auftreten, da kein Push mehr nötig ist. Zusätzlich
+verhindert eine `concurrency`-Einstellung, dass zwei Läufe überhaupt
+gleichzeitig starten.
+
 ## Bekannte Einschränkungen
 
 - Manche Karriereseiten laden Inhalte erst per JavaScript nach (z. B. über
@@ -116,3 +142,9 @@ offenbar schon das Wort "Manager" allein. Behoben durch:
   umsetzbar wäre. Aktuell wird das bewusst nicht zusätzlich eingeschränkt; bei
   Bedarf lässt sich das in `src/distance_filter.py` verschärfen (z. B. nur noch
   "vollständig remote" statt jedes Home-Office-Hinweises als Ausnahme).
+- Der GitHub-Cache, in dem die Liste bekannter Job-IDs liegt, wird laut
+  GitHub automatisch entfernt, wenn er 7 Tage lang nicht genutzt wurde.
+  Da der Crawler täglich läuft und den Cache dabei jedes Mal neu beschreibt,
+  ist das in der Praxis kein Problem -- nur falls der Workflow mal länger
+  als eine Woche pausiert (z. B. Urlaub, Repository-Wartung), würde die
+  Duplikat-Erkennung danach einmalig wieder von Null starten.
