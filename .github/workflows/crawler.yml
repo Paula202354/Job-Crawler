@@ -8,11 +8,10 @@ on:
   workflow_dispatch: {} # erlaubt manuelles Auslösen über die GitHub-Oberfläche
 
 permissions:
-  contents: write # nötig, damit der Workflow data/seen_jobs.json zurückschreiben darf
+  contents: read # kein "write" mehr nötig, da nichts mehr ins Repo zurückgeschrieben wird
 
-# Verhindert, dass zwei Läufe gleichzeitig starten und sich beim finalen
-# Push gegenseitig blockieren -- ein neuer Lauf wartet, bis der vorherige
-# fertig ist, statt parallel zu laufen.
+# Verhindert, dass zwei Läufe gleichzeitig starten und sich gegenseitig
+# beim Lesen/Schreiben der Job-ID-Liste in die Quere kommen.
 concurrency:
   group: job-crawler-single-run
   cancel-in-progress: false
@@ -32,6 +31,20 @@ jobs:
       - name: Abhängigkeiten installieren
         run: pip install -r requirements.txt
 
+      # Statt die Liste bekannter Job-IDs per "git push" ins Repository
+      # zurückzuschreiben (was wiederholt zu Konflikten führte, wenn z.B.
+      # gleichzeitig manuell gepusht oder mehrfach getestet wurde), nutzen
+      # wir jetzt GitHub's eigenen Cache-Speicher dafür. Das ist komplett
+      # unabhängig von Git-Commits/Pushes -- es kann dabei keinen
+      # "rejected, fetch first"-Konflikt mehr geben.
+      - name: Liste bekannter Job-IDs aus dem Cache laden
+        uses: actions/cache/restore@v4
+        with:
+          path: data/seen_jobs.json
+          key: seen-jobs-${{ github.run_id }}
+          restore-keys: |
+            seen-jobs-
+
       - name: Crawler ausführen
         env:
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
@@ -39,21 +52,9 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python -m src.main
 
-      - name: Aktualisierte Duplikat-Liste committen
-        run: |
-          git config user.name "job-crawler-bot"
-          git config user.email "actions@github.com"
-          git add data/seen_jobs.json
-          git diff --quiet --cached || git commit -m "Aktualisiere gesehene Job-IDs [skip ci]"
-          # Bis zu 5 Versuche: zuerst Remote-Stand einarbeiten, dann pushen.
-          # Falls zwischen Pull und Push doch noch jemand anderes gepusht hat,
-          # einfach erneut versuchen statt sofort aufzugeben.
-          for i in 1 2 3 4 5; do
-            git pull --rebase origin main
-            if git push; then
-              echo "Push erfolgreich (Versuch $i)."
-              break
-            fi
-            echo "Push fehlgeschlagen (Versuch $i von 5), erneuter Versuch ..."
-            sleep $((RANDOM % 5 + 1))
-          done
+      - name: Aktualisierte Liste bekannter Job-IDs im Cache speichern
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/seen_jobs.json
+          key: seen-jobs-${{ github.run_id }}
